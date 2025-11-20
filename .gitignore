@@ -1,0 +1,15 @@
+# --- Secretos y Entorno ---
+.env
+.env.local
+
+# --- Por sien local se quiere añadir algo al compose del repo ....
+compose.override.yaml
+
+# --- Archivos de sistema ---
+.DS_Store
+Thumbs.db
+
+# --- Si hubiera certificados, claves ...
+*.pem
+*.key
+ssl/
