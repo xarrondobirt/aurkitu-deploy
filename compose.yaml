@@ -1,0 +1,112 @@
+services:
+  # --- Base de Datos PostgreSQL con extensión PostGIS ---
+  postgres:
+    container_name: cont-postgresql
+    image: postgis/postgis:${POSTGIS_TAG}
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  # --- pgAdmin (Interfaz Gráfica para DB) ---
+  pgadmin4:
+    container_name: cont-pgadmin
+    image: dpage/pgadmin4:${PGADMIN_TAG}
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_MAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "${PGADMIN_PORT}:80"
+    depends_on:
+      - postgres
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  # --- Backend Spring Boot ---
+  backend:
+    container_name: cont-backend
+    # Construye la imagen usando el Dockerfile en la carpeta ./backend
+    build: ./backend
+    depends_on:
+      - postgres
+    volumes:
+      - uploads_data:${UPLOADS_ROOT_PATH}
+    environment:
+      # Pasa las variables de entorno para que Spring se conecte a la DB
+      # Usa 'postgres' como host, que es el nombre del servicio de la DB (o cont-postgresql)
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/aurkitu
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASS}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+      - SPRING_MAIL_USERNAME=${MAIL_USER}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASS}
+      - UPLOADS_ROOT_PATH=${UPLOADS_ROOT_PATH}
+      - UPLOADS_FOTO_DIR=${UPLOADS_FOTO_DIR}
+      - UPLOADS_DOC_DIR=${UPLOADS_DOC_DIR}
+      # Clave para firmar los tokens (Seguridad JWT)
+      - EUS_BIRT_PROYECTO_JWTSECRET=${JWT_SECRET}
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  # --- Nginx Reverse Proxy --
+  nginx:
+    container_name: cont-nginx
+    image: nginx:${NGINX_TAG}
+    ports:
+      # Expone el puerto 80 del host (HTTP)
+      - "80:80"
+      - "443:443" #HTTPS
+    volumes:
+      # Monta el archivo de configuración de Nginx
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+ #     - certbot_certs:/etc/letsencrypt:ro #Aquí estará la clave privada y certificado obtenido por certbot. Nginx solo debe leer
+ #     - certbot_webroot:/var/www/certbot:ro #Aquí estará el página de prueba que crea certbot para probar a LetsEncrypt que el dominio es nuestro
+      - uploads_data:/var/www/uploads:ro
+    depends_on:
+      - backend
+#      - certbot
+    networks:
+      - app-net
+    restart: unless-stopped
+
+#  certbot:
+#    container_name: cont-certbot
+#    image: certbot/certbot:${CERTBOT_TAG}
+#    volumes:
+#      - certbot_certs:/etc/letsencrypt
+#      - certbot_webroot:/var/www/certbot
+#    environment:
+#      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+#      - DOMAIN=${DOMAIN}
+#    entrypoint: /bin/sh
+#    command: -c "sleep infinity" #El contenedor debe seguir vivo para la renovación automática de certificados ToDo
+
+# -- Volúmenes y Redes ---
+volumes:
+  pgdata: # Volumen para persistir los datos de PostgreSQL, los coloco explícitamente en la partición dedicada
+    driver: local #No están en red, sino en la misma máquina
+    driver_opts:
+      type: 'none' #No vamos a montar nada nuevo, el montaje ya se ha hecho
+      o: 'bind' #Hará un bind mount del dir que le indico a continuación
+      device: '/docker_data/postgresql'
+  uploads_data: #Volumen para almacenar fotos y docs.
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/docker_data${UPLOADS_ROOT_PATH}' #Carpeta para subida de fotos y documentos
+
+#  certbot_certs:
+#  certbot_webroot:
+
+networks:
+  app-net: # Red para la comunicación entre servicios
+    driver: bridge
