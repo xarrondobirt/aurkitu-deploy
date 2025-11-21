@@ -64,12 +64,18 @@ services:
       # Expone el puerto 80 del host (HTTP)
       - "80:80"
       - "443:443" #HTTPS
+    environment:
+      # Nginx leerá esto y sustituirá ${SERVER_NAME} en la plantilla
+      - DOMAIN=${DOMAIN}
     volumes:
       # Monta el archivo de configuración de Nginx
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
  #     - certbot_certs:/etc/letsencrypt:ro #Aquí estará la clave privada y certificado obtenido por certbot. Nginx solo debe leer
  #     - certbot_webroot:/var/www/certbot:ro #Aquí estará el página de prueba que crea certbot para probar a LetsEncrypt que el dominio es nuestro
       - uploads_data:/var/www/uploads:ro
+      - # Nginx procesará este archivo y generará automáticamente
+        # el archivo final en /etc/nginx/conf.d/
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template
     depends_on:
       - backend
 #      - certbot

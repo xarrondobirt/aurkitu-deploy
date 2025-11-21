@@ -3,7 +3,7 @@
 .env.local
 
 # --- Por sien local se quiere añadir algo al compose del repo ....
-compose.override.yaml
+# compose.override.yaml ¡¡¡¡¡ACORDARSE DE QUITARLO CUANDO TENGA LISTO ACTIONS!!!!
 
 # --- Archivos de sistema ---
 .DS_Store
@@ -13,3 +13,7 @@ Thumbs.db
 *.pem
 *.key
 ssl/
+
+backend/
+backend/Dockerfile
+backend/app.jar
