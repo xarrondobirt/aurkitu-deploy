@@ -1,0 +1,39 @@
+server {
+    # El servidor Nginx escuchará en el puerto 80
+    listen 80;
+
+    # Usamos la variable de entorno inyectada por Docker
+    server_name ${DOMAIN};
+
+    # Configuración movida desde el bloque http global a este server específico
+    client_max_body_size 15M;
+
+    # NOTA: 'include mime.types' y 'default_type' ya están
+    # en el nginx.conf global de la imagen, no hace falta repetirlos.
+
+    # Subida de ficheros
+    location /uploads/ {
+        root /var/www;
+        autoindex off; # Por seguridad, para que no listen los ficheros
+    }
+
+    # Para que certbot pueda poner ahí el challenge
+    location /.well-known/acme-challenge/ {
+        # Sirve los archivos desde el volumen que comparte Nginx con Certbot
+        root /var/www/certbot;
+    }
+
+    # Todas las peticiones (/) se redirigirán al Backend
+    location / {
+        # IMPORTANTE: Asegúrate de que el nombre del host aquí ('aurkitu-back')
+        # coincida con el nombre del servicio en tu docker-compose.yml.
+        # En tu snippet anterior ponía 'backend', en el compose suele ser 'aurkitu-back'.
+        proxy_pass http://aurkitu-back:8080;
+
+        # Cabeceras estándar para proxy
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
