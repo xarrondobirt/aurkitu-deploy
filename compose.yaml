@@ -9,7 +9,8 @@ services:
       - POSTGRES_DB=${DB_NAME}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql #Script para crear tablas iniciales si la carpeta de datos (pgdata) está VACÍA
+    #Si luego hay cambios en BD y cambia schema.sql, no se aplicarán automáticamente (Todo FLYWAY)
     networks:
       - app-net
     restart: unless-stopped
@@ -32,8 +33,9 @@ services:
   # --- Backend Spring Boot ---
   backend:
     container_name: cont-backend
-    # Construye la imagen usando el Dockerfile en la carpeta ./backend
-    build: ./backend
+    # Construye la imagen usando el Dockerfile en la carpeta ./backend (que debería contener también el jar)
+    # build: ./backend
+    image: ghcr.io/${BACKEND_PATH}:${BACKEND_TAG}
     depends_on:
       - postgres
     volumes:
@@ -44,7 +46,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/aurkitu
       - SPRING_DATASOURCE_USERNAME=${DB_USER}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASS}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate #en alguna ocasión he puesto none si había problemas entre la BD y las clases JPA
       - SPRING_MAIL_USERNAME=${MAIL_USER}
       - SPRING_MAIL_PASSWORD=${MAIL_PASS}
       - UPLOADS_ROOT_PATH=${UPLOADS_ROOT_PATH}
@@ -67,11 +69,12 @@ services:
     environment:
       - DOMAIN=${DOMAIN}
     volumes:
-      #- certbot_certs:/etc/letsencrypt:ro #Aquí estará la clave privada y certificado obtenido por certbot. Nginx solo debe leer
-      #- certbot_webroot:/var/www/certbot:ro #Aquí estará el página de prueba que crea certbot para probar a LetsEncrypt que el dominio es nuestro
-        # Nginx procesará este archivo y generará automáticamente
+      - certbot_certs:/etc/letsencrypt:ro #Aquí estará la clave privada y certificado obtenido por certbot. Nginx solo debe leer
+      - certbot_webroot:/var/www/certbot:ro #Aquí estará el página de prueba que crea certbot para probar a LetsEncrypt que el dominio es nuestro
+      # Nginx procesará este archivo y generará automáticamente
       # el archivo final en /etc/nginx/conf.d/
       - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - uploads_data:/var/www/uploads:ro
     depends_on:
       - backend
       - certbot
@@ -80,17 +83,19 @@ services:
     restart: unless-stopped
 
 
-#  certbot:
-#    container_name: cont-certbot
-#    image: certbot/certbot:${CERTBOT_TAG}
-#    volumes:
-#      - certbot_certs:/etc/letsencrypt
-#      - certbot_webroot:/var/www/certbot
-#    environment:
-#      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
-#      - DOMAIN=${DOMAIN}
-#    entrypoint: /bin/sh
-#    command: -c "sleep infinity" #El contenedor debe seguir vivo para la renovación automática de certificados ToDo
+  certbot:
+    container_name: cont-certbot
+    image: certbot/certbot:${CERTBOT_TAG}
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    environment:
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+      - DOMAIN=${DOMAIN}
+    entrypoint: /bin/sh
+    command: -c "sleep infinity" #El contenedor debe seguir vivo para la renovación automática de certificados ToDo
+    #ToDo configurarlo para que mire cada x horas
+    #entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 # -- Volúmenes y Redes ---
 volumes:
@@ -107,8 +112,8 @@ volumes:
       o: 'bind'
       device: '/docker_data${UPLOADS_ROOT_PATH}' #Carpeta para subida de fotos y documentos
 
-#  certbot_certs:
-#  certbot_webroot:
+  certbot_certs:
+  certbot_webroot:
 
 networks:
   app-net: # Red para la comunicación entre servicios

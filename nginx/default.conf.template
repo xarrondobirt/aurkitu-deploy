@@ -1,61 +1,54 @@
 server {
-    # El servidor Nginx escuchará en el puerto 80
+    # Escucha HTTP y redirige tutto a HTTPS
     listen 80;
-
-    # Usamos la variable de entorno inyectada por Docker
     server_name ${DOMAIN};
 
-    # Configuración movida desde el bloque http global a este server específico
+    # Tamaño máximo de subida
     client_max_body_size 15M;
 
-    # NOTA: 'include mime.types' y 'default_type' ya están
-    # en el nginx.conf global de la imagen, no hace falta repetirlos.
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
 
-    # Subida de ficheros
+server {
+    # HTTPS
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    # Certificados dentro del contenedor (volumen compartido con certbot)
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    # SSL recomendados
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    # Subida de ficheros (sirve archivos estáticos)
     location /uploads/ {
-        root /var/www;
-        autoindex off; # Por seguridad, para que no listen los ficheros
+        alias /var/www/uploads/;
+        autoindex off;
+        try_files $uri $uri/ =404;
     }
 
-    # Para que certbot pueda poner ahí el challenge
-    location /.well-known/acme-challenge/ {
-        # Sirve los archivos desde el volumen que comparte Nginx con Certbot
-        root /var/www/certbot;
-    }
-
-    # Todas las peticiones (/) se redirigirán al Backend
+    # Proxy hacia el backend de Spring
     location / {
         proxy_pass http://backend:8080;
-
-        # Cabeceras estándar para proxy
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        proxy_set_header Connection "";
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_buffering off;
     }
-
- #   server {
- #           listen 443 ssl;
- #           server_name develop.aurkitu.online; # Importante: añade tu dominio
-#
- #           # --- Rutas a los certificados DENTRO DEL CONTENEDOR ---
-  #          # Nginx lee los certificados desde el volumen que comparte con certbot
-   #         ssl_certificate /etc/letsencrypt/live/develop.aurkitu.online/fullchain.pem;
-    #        ssl_certificate_key /etc/letsencrypt/live/develop.aurkitu.online/privkey.pem;
-#
- #           # --- Configuraciones SSL recomendadas ---
-  #          ssl_protocols TLSv1.2 TLSv1.3;
-   #         ssl_ciphers 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384';
-    #        ssl_prefer_server_ciphers off;
-#
- #           # --- Proxy al backend de Spring ---
-  #          location / {
-   #             proxy_pass http://backend:8080;
-    #            proxy_set_header Host $host;
-     #           proxy_set_header X-Real-IP $remote_addr;
-      #          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       #         proxy_set_header X-Forwarded-Proto $scheme;
-        #    }
-     #   }
-
 }
