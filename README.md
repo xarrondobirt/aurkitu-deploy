@@ -1,5 +1,3 @@
-Aurkitu - Infraestructura de Despliegue
-
 Este repositorio contiene la orquestación de contenedores (Docker Compose) y la configuración del Proxy Inverso (Nginx) para el proyecto Aurkitu.
 
 1. Prerrequisitos del Servidor
@@ -40,8 +38,8 @@ La aplicación requiere una estructura de carpetas específica en el host para p
 /docker_data/
 ├── postgresql/        # UID 999 (deploy-runner)
 └── uploads/           # UID 1000 (birt) - Backend escribe aquí
-├── fotos/
-└── docs/
+    ├── fotos/
+    └── docs/
 
 
 Comandos para generar la estructura:
