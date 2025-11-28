@@ -1,7 +1,0 @@
-#Añadirá esto al compose.yaml --> la idea es que haga el build con lo que tenga en la carepta local (app.jar) y
-#y no descargando la imagen de back del repo de momento ...
-services:
-  # --- Backend Spring Boot ---
-  backend:
-    # Construye la imagen usando el Dockerfile en la carpeta ./backend
-    build: ./backend
