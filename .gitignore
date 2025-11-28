@@ -3,7 +3,7 @@
 .env.local
 
 # --- Por sien local se quiere añadir algo al compose del repo ....
-# compose.override.yaml ¡¡¡¡¡ACORDARSE DE QUITARLO CUANDO TENGA LISTO ACTIONS!!!!
+compose.override.yaml
 
 # --- Archivos de sistema ---
 .DS_Store
@@ -17,3 +17,6 @@ ssl/
 backend/
 backend/Dockerfile
 backend/app.jar
+
+#Para la creación inicial de la ase de datos por parte de postgres, pero se copia automáticamente en el CD
+db/schema.sql
