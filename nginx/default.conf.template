@@ -7,7 +7,12 @@ server {
     client_max_body_size 15M;
 
     location / {
-        return 301 https://$host$request_uri;
+        # Me ha sucedido que un 301 mata la petición postman con un POST y un JSON;
+        # al redirigir, Postman (los navegadores también lo harían( transforma el POST en GET y pierde el body.
+        # El back recibe un GET y responde con 405 Method Not Allowed.
+        # Por eso, en lugar de un 301, devuelvo un 308 (Permanent Redirect que no cambia el verbo HTTP)
+        # return 301 https://$host$request_uri;
+        return 308 https://$host$request_uri;
     }
 }
 
