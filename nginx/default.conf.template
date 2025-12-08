@@ -23,6 +23,16 @@ server {
     }
 }
 
+# OPTIMIZACIÓN RENDIMIENTO (problemas de que se queda colgada la web y no despierta hasta que se hace una petición a un endpoint)
+# Hay que definir este bloque (como definir un grupo de servidores con un nombre), para los que
+# se mantendrán 100 conexiones abiertas
+upstream spring_backend {
+    # 'backend' es el nombre del servicio en docker-compose
+    server backend:8080;
+    # Mantiene 100 conexiones abiertas esperando peticiones
+    keepalive 100;
+}
+
 server {
     # HTTPS
     listen 443 ssl;
@@ -77,18 +87,25 @@ server {
 
         # Fin config CORS (quitar tras automatizar depliegue de frontend)
 
-        proxy_pass http://backend:8080;
-        proxy_http_version 1.1;
+        # OPTIMIZACIÓN RENDIMIENTO
+        # Mantiene la conexión abierta con el backend para reutilizarla en futuras peticiones
+        proxy_pass http://spring_backend; # Usa el upstream definido arriba
+        proxy_http_version 1.1; # Mantiene la conexión abierta con el backend (HTTP 1.0 no lo permite)
+        proxy_set_header Connection ""; # Evita que se cierre la conexión después de cada petición
+        proxy_set_header Upgrade $http_upgrade; # Permite WebSockets si se usan
+        proxy_set_header Connection "upgrade"; # Mantiene la conexión abierta para WebSockets
+        proxy_redirect off; # Si el backend redirige, se respeta y no se cambia la URL y se pasa así al cliente
+        proxy_send_timeout 120s; # Tiempo máximo para enviar la petición al backend
+        proxy_read_timeout 120s; # Tiempo máximo para leer la respuesta del backend (si tuviera que hacer una consulta larga, no es el caso)
+
+
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
-        proxy_set_header Connection "";
-        proxy_connect_timeout 5s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-        proxy_buffering off;
+
+
     }
 }
