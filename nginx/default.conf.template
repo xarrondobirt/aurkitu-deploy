@@ -6,6 +6,13 @@ server {
     # Tamaño máximo de subida
     client_max_body_size 15M;
 
+     #Para que certbot pueda poner ahí el challenge
+    location /.well-known/acme-challenge/ {
+        # Sirve los archivos desde el volumen que comparte Nginx con Certbot
+        # Esta es la ruta DENTRO del contenedor de Nginx
+        root /var/www/certbot;
+    }
+
     location / {
         # Me ha sucedido que un 301 mata la petición postman con un POST y un JSON;
         # al redirigir, Postman (los navegadores también lo harían( transforma el POST en GET y pierde el body.
