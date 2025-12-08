@@ -34,8 +34,8 @@ server {
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
 
     # QUITAR CUANDO NO HAYA PROBLEMAS CON EL CORS
-    ssl_session_tickets off;
-    ssl_verify_client off;
+    # ssl_session_tickets off;
+    # ssl_verify_client off;
 
     # Subida de ficheros (sirve archivos estáticos)
     location /uploads/ {
@@ -45,28 +45,28 @@ server {
     }
 
     # Proxy hacia el backend de Spring
-    location / {
+    location /v1/ {
 
         #Configuración de CORS para permitir pruebas desde local (hasta que>
-        set $cors_origin 'http://localhost:4200';
+        #set $cors_origin 'http://localhost:4200';
 
-        if ($request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' $cors_origin always;
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELE>
-            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Req>
-            add_header 'Access-Control-Max-Age' 1728000 always;
-            add_header 'Content-Type' 'text/plain; charset=utf-8' always;
-            add_header 'Content-Length' 0 always;
-            return 204;
-        }
+        #if ($request_method = 'OPTIONS') {
+        #    add_header 'Access-Control-Allow-Origin' $cors_origin always;
+        #    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELE>
+        #    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Req>
+        #    add_header 'Access-Control-Max-Age' 1728000 always;
+        #    add_header 'Content-Type' 'text/plain; charset=utf-8' always;
+        #    add_header 'Content-Length' 0 always;
+        #    return 204;
+        #}
 
-        add_header 'Access-Control-Allow-Origin' $cors_origin always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, >
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Request>
-        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content->
+        #add_header 'Access-Control-Allow-Origin' $cors_origin always;
+        #add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, >
+        #add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Request>
+        #add_header 'Access-Control-Expose-Headers' 'Content-Length,Content->
 
-        proxy_set_header Origin "";     #Me daba un Forbidden
-        proxy_set_header Referer "";  #Me daba un Forbidden
+        # proxy_set_header Origin "";     #Me daba un Forbidden
+        # proxy_set_header Referer "";  #Me daba un Forbidden
 
         # Fin config CORS (quitar tras automatizar depliegue de frontend)
 
