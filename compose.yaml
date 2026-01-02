@@ -33,8 +33,9 @@ services:
   # --- Backend Spring Boot ---
   backend:
     container_name: cont-backend
-    # Construye la imagen usando el Dockerfile en la carpeta ./backend (que debería contener también el jar)
+    # Cuando construíamos la imagen usando el Dockerfile en la carpeta ./backend (que debería contener también el jar)
     # build: ./backend
+    # Ahora usamos la imagen publicada en el GitHub Container Registry
     image: ghcr.io/${BACKEND_PATH}:${BACKEND_TAG}
     depends_on:
       - postgres
@@ -52,6 +53,8 @@ services:
       - UPLOADS_ROOT_PATH=${UPLOADS_ROOT_PATH}
       - UPLOADS_FOTO_DIR=${UPLOADS_FOTO_DIR}
       - UPLOADS_DOC_DIR=${UPLOADS_DOC_DIR}
+      - FOTODIR=${FOTODIR}
+      - DOCDIR=${DOCDIR}
       # Clave para firmar los tokens (Seguridad JWT)
       - EUS_BIRT_PROYECTO_JWTSECRET=${JWT_SECRET}
     networks:
@@ -74,7 +77,8 @@ services:
       # Nginx procesará este archivo y generará automáticamente
       # el archivo final en /etc/nginx/conf.d/
       - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - uploads_data:/var/www/uploads:ro
+      - uploads_data:/var/www/uploads:ro #Los archivos subidos (fotos y docs) deben ser accesibles desde Nginx
+      - ./frontend-dist:/var/www/frontend:ro # Los archivos estáticos del frontend (Angular) ya compilado
     depends_on:
       - backend
       - certbot
