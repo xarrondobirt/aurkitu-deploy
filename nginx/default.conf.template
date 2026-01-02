@@ -24,6 +24,7 @@ server {
 }
 
 # OPTIMIZACIÓN RENDIMIENTO (problemas de que se queda colgada la web y no despierta hasta que se hace una petición a un endpoint)
+# ToDo: Investigar más a fondo y ver si es mejor solución que el keepalive del backend o si sirve realmente para este caso
 # Hay que definir este bloque (como definir un grupo de servidores con un nombre), para los que
 # se mantendrán 100 conexiones abiertas
 upstream spring_backend {
@@ -44,15 +45,23 @@ server {
 
     # SSL recomendados
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
-    ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_buffer_size 1360;
+
+    # Otras configuraciones SSL (no probadas a fondo)
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 20m;
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
 
-    # QUITAR CUANDO NO HAYA PROBLEMAS CON EL CORS
-    # ssl_session_tickets off;
-    # ssl_verify_client off;
+	# -- FRONTEND ---
+	root /var/www/frontend;  # La carpeta que montamos en el compose
+        index index.html;
+
+        location / {
+            # Por si piden algo específico que no sea index, que sería lo que Angular enrutaría
+            try_files $uri $uri/ /index.html;
+	}
 
     # Subida de ficheros (sirve archivos estáticos)
     location /uploads/ {
@@ -64,36 +73,13 @@ server {
     # Proxy hacia el backend de Spring
     location /v1/ {
 
-        #Configuración de CORS para permitir pruebas desde local (hasta que>
-        #set $cors_origin 'http://localhost:4200';
-
-        #if ($request_method = 'OPTIONS') {
-        #    add_header 'Access-Control-Allow-Origin' $cors_origin always;
-        #    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELE>
-        #    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Req>
-        #    add_header 'Access-Control-Max-Age' 1728000 always;
-        #    add_header 'Content-Type' 'text/plain; charset=utf-8' always;
-        #    add_header 'Content-Length' 0 always;
-        #    return 204;
-        #}
-
-        #add_header 'Access-Control-Allow-Origin' $cors_origin always;
-        #add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, >
-        #add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Request>
-        #add_header 'Access-Control-Expose-Headers' 'Content-Length,Content->
-
-        # proxy_set_header Origin "";     #Me daba un Forbidden
-        # proxy_set_header Referer "";  #Me daba un Forbidden
-
-        # Fin config CORS (quitar tras automatizar depliegue de frontend)
-
         # OPTIMIZACIÓN RENDIMIENTO
         # Mantiene la conexión abierta con el backend para reutilizarla en futuras peticiones
         proxy_pass http://spring_backend; # Usa el upstream definido arriba
         proxy_http_version 1.1; # Mantiene la conexión abierta con el backend (HTTP 1.0 no lo permite)
         proxy_set_header Connection ""; # Evita que se cierre la conexión después de cada petición
-        proxy_set_header Upgrade $http_upgrade; # Permite WebSockets si se usan
-        proxy_set_header Connection "upgrade"; # Mantiene la conexión abierta para WebSockets
+        # proxy_set_header Upgrade $http_upgrade;
+        # proxy_set_header Connection "upgrade";
         proxy_redirect off; # Si el backend redirige, se respeta y no se cambia la URL y se pasa así al cliente
         proxy_send_timeout 120s; # Tiempo máximo para enviar la petición al backend
         proxy_read_timeout 120s; # Tiempo máximo para leer la respuesta del backend (si tuviera que hacer una consulta larga, no es el caso)
