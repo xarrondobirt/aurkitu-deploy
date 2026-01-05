@@ -25,7 +25,7 @@ UUID=tu-uuid-disco /docker_data    ext4    defaults,nofail        0       2
 # Para ver particiones no montadas con espacio disponible
 lsblk -o NAME,SIZE,TYPE, MOUNTPOINT
 # Sabiendo su nombre, vemos su formato, uuid, etc
-blkid (dev/vda4)
+blkid dev/vda4
 ```
 ---
 ## 2. Instalación y Configuración de Docker
@@ -83,12 +83,12 @@ El repositorio se clona desde este **repositorio de despliegue** [aurkitu-deploy
 cd /opt
 sudo mkdir aurkitu
 sudo chown deploy-runner:deploy-runner aurkitu
-sudo -u deploy-runner git clone https://github.com/xarrondobirt/aurkitu-back.git aurkitu
+sudo -u deploy-runner git clone https://github.com/xarrondobirt/aurkitu-deploy.git aurkitu
 ```
 ```bash
 
 /opt/aurkitu/
-├─- .env                  # (Fichero de secretos - NO versionado)
+├── .env                  # (Fichero de secretos - NO versionado)
 ├── compose.yaml          # (Orquestación Docker)
 ├── db/                   # (Scripts de inicialización de la base de datos)
 └── nginx/                # (Configuración del Proxy)
@@ -98,6 +98,7 @@ sudo -u deploy-runner git clone https://github.com/xarrondobirt/aurkitu-back.git
 ```bash
 cd /opt/aurkitu 
 sudo -u deploy-runner mkdir db
+sudo -u deploy-runner wget https://raw.githubusercontent.com/xarrondobirt/aurkitu-back/refs/heads/develop/db/schema.sql -O db/schema.sql
 ```
 #### Variables de entorno .env
 Se debe crear manualmente el fichero `.env`a partir de la plantilla `.env.example`del repositorio.
@@ -107,8 +108,7 @@ sudo -u deploy-runner cp .env.example .env
 sudo -u deploy-runner nano .env
 ```
 ```
-### 4.2. Datos y Runners (`/d
-ocker_data`)
+### 4.2. Datos y Runners (`/docker_data`)
 
 Esta es la estructura real en producción. Observar los permisos especiales para la carpeta `mobile`, ya que es el runner quien deposita allí los APKs, mientras que `fotos` las gestiona el backend (usuario birt).
 
@@ -180,5 +180,5 @@ cd /opt/aurkitu
 # Ver los logs de todos los contenedores en tiempo real
 sudo -u deploy-runner docker compose logs -f 
 # Ver los log de un contenedor específico en tiempo real
-sudo -u deploy-runner docker compose logs -f backend"
+sudo -u deploy-runner docker compose logs -f backend
 ```
