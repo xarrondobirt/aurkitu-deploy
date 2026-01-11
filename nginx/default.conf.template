@@ -94,4 +94,17 @@ server {
 
 
     }
+
+    # --- SWAGGER / OPENAPI ---
+    # Redirigir la documentación al backend (no en producción real, pero útil para desarrollo y pruebas)
+    location ~ ^/(v3/api-docs|swagger-ui|swagger-ui.html) {
+        proxy_pass http://spring_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
